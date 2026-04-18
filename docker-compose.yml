@@ -1,0 +1,52 @@
+services:
+  leader:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      NODE_ROLE: leader
+      NODE_FOLLOWER_URLS: "http://follower1:8080,http://follower2:8080,http://follower3:8080,http://follower4:8080"
+      NODE_WRITE_QUORUM_SIZE: ${WRITE_QUORUM:-1}
+      NODE_READ_QUORUM_SIZE: ${READ_QUORUM:-1}
+
+  follower1:
+    build: .
+    ports:
+      - "8081:8080"
+    environment:
+      NODE_ROLE: follower
+
+  follower2:
+    build: .
+    ports:
+      - "8082:8080"
+    environment:
+      NODE_ROLE: follower
+
+  follower3:
+    build: .
+    ports:
+      - "8083:8080"
+    environment:
+      NODE_ROLE: follower
+
+  follower4:
+    build: .
+    ports:
+      - "8084:8080"
+    environment:
+      NODE_ROLE: follower
+
+  test-runner:
+    build: .
+    profiles: ["test"]
+    depends_on:
+      - leader
+      - follower1
+      - follower2
+      - follower3
+      - follower4
+    environment:
+      LEADER_URL: "http://leader:8080"
+      FOLLOWER_URLS: "http://follower1:8080,http://follower2:8080,http://follower3:8080,http://follower4:8080"
+    entrypoint: ["./mvnw", "test", "-Dtest=LeaderFollowerConsistencyTest"]

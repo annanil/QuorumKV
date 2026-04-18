@@ -1,0 +1,11 @@
+target/
+output/
+output-aws-64t-50k/
+dependency-reduced-pom.xml
+bin/
+lib/
+include/
+pyvenv.cfg
+__pycache__/
+*.pyc
+.DS_Store
