@@ -1,0 +1,75 @@
+name: Load Tester CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
+      - name: Build server JAR
+        run: ./mvnw package -DskipTests -q
+
+      - name: Build load-tester JAR
+        run: cd load-tester && mvn package -DskipTests -q
+
+      - name: Start cluster (W=3 R=3)
+        run: WRITE_QUORUM=3 READ_QUORUM=3 docker compose up --build -d
+        env:
+          WRITE_QUORUM: 3
+          READ_QUORUM: 3
+
+      - name: Wait for leader to be healthy
+        run: |
+          echo "Waiting for leader on localhost:8080..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8080/kv?key=warmup > /dev/null 2>&1 || \
+               curl -sf -o /dev/null -w "%{http_code}" http://localhost:8080/kv?key=warmup | grep -qE "^(200|404)$"; then
+              echo "Leader is up (attempt $i)"
+              break
+            fi
+            echo "Attempt $i: not ready yet, waiting 3s..."
+            sleep 3
+            if [ "$i" -eq 30 ]; then
+              echo "ERROR: leader did not come up in time"
+              docker compose logs leader
+              exit 1
+            fi
+          done
+
+      - name: Run smoke test (500 requests, 50% writes)
+        run: |
+          java -jar load-tester/target/load-tester-1.0-SNAPSHOT.jar \
+          --write-url=http://localhost:8080 \
+          --config=ci-smoke \
+          --requests=500 \
+          --threads=8 \
+          --num-keys=10 \
+          --write-pct=50
+
+      - name: Assert zero 5xx errors
+        run: python3 load-tester/check_results.py load-tester/output/latencies_ci-smoke.csv
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-results
+          path: load-tester/output/
+
+      - name: Test down cluster
+        if: always()
+        run: docker compose down
