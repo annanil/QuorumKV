@@ -51,8 +51,9 @@ jobs:
           done
 
       - name: Run smoke test (500 requests, 50% writes)
+        working-directory: load-tester
         run: |
-          java -jar load-tester/target/load-tester-1.0-SNAPSHOT.jar \
+          java -jar target/load-tester-1.0-SNAPSHOT.jar \
           --write-url=http://localhost:8080 \
           --config=ci-smoke \
           --requests=500 \
