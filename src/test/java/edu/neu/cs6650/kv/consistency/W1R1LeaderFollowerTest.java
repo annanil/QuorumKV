@@ -1,7 +1,7 @@
-package edu.neu.cs6650.assignment4.kv.consistency;
+package edu.neu.cs6650.kv.consistency;
 
-import edu.neu.cs6650.assignment4.kv.dto.KvWriteRequest;
-import edu.neu.cs6650.assignment4.kv.dto.KvWriteResponse;
+import edu.neu.cs6650.kv.dto.KvWriteRequest;
+import edu.neu.cs6650.kv.dto.KvWriteResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;

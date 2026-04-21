@@ -1,6 +1,6 @@
-package edu.neu.cs6650.assignment4.kv.controller;
+package edu.neu.cs6650.kv.controller;
 
-import edu.neu.cs6650.assignment4.kv.config.NodeProperties;
+import edu.neu.cs6650.kv.config.NodeProperties;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;

@@ -1,11 +1,11 @@
-package edu.neu.cs6650.assignment4.kv.dto;
+package edu.neu.cs6650.kv.model;
 
-public class KvReadResponse {
+public class VersionedValue {
   private String key;
   private String value;
   private int version;
 
-  public KvReadResponse(String key, String value, int version) {
+  public VersionedValue(String key, String value, int version) {
     this.key = key;
     this.value = value;
     this.version = version;
@@ -21,5 +21,13 @@ public class KvReadResponse {
 
   public int getVersion() {
     return version;
+  }
+
+  public void setValue(String value) {
+    this.value = value;
+  }
+
+  public void setVersion(int version) {
+    this.version = version;
   }
 }

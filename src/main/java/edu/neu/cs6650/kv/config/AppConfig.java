@@ -1,4 +1,4 @@
-package edu.neu.cs6650.assignment4.kv.config;
+package edu.neu.cs6650.kv.config;
 
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;

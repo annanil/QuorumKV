@@ -1,4 +1,4 @@
-package edu.neu.cs6650.assignment4.kv.dto;
+package edu.neu.cs6650.kv.dto;
 
 public class KvWriteRequest {
   private String key;

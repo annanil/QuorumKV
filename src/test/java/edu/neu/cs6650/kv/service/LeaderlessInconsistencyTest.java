@@ -1,8 +1,8 @@
-package edu.neu.cs6650.assignment4.kv.service;
+package edu.neu.cs6650.kv.service;
 
-import edu.neu.cs6650.assignment4.kv.config.NodeProperties;
-import edu.neu.cs6650.assignment4.kv.dto.ReplicationWriteRequest;
-import edu.neu.cs6650.assignment4.kv.model.VersionedValue;
+import edu.neu.cs6650.kv.config.NodeProperties;
+import edu.neu.cs6650.kv.dto.ReplicationWriteRequest;
+import edu.neu.cs6650.kv.model.VersionedValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.client.RestTemplate;

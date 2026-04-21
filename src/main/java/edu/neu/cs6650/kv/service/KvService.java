@@ -1,13 +1,13 @@
-package edu.neu.cs6650.assignment4.kv.service;
+package edu.neu.cs6650.kv.service;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import edu.neu.cs6650.assignment4.kv.config.NodeProperties;
-import edu.neu.cs6650.assignment4.kv.model.VersionedValue;
-import edu.neu.cs6650.assignment4.kv.dto.KvReadResponse;
-import edu.neu.cs6650.assignment4.kv.dto.ReplicationWriteRequest;
+import edu.neu.cs6650.kv.config.NodeProperties;
+import edu.neu.cs6650.kv.model.VersionedValue;
+import edu.neu.cs6650.kv.dto.KvReadResponse;
+import edu.neu.cs6650.kv.dto.ReplicationWriteRequest;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;

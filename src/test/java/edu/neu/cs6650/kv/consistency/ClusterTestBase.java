@@ -1,4 +1,4 @@
-package edu.neu.cs6650.assignment4.kv.consistency;
+package edu.neu.cs6650.kv.consistency;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;

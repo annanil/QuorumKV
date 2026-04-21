@@ -1,4 +1,4 @@
-package edu.neu.cs6650.assignment4.kv.config;
+package edu.neu.cs6650.kv.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;

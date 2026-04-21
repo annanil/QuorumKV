@@ -1,11 +1,11 @@
-package edu.neu.cs6650.assignment4.kv.controller;
+package edu.neu.cs6650.kv.controller;
 
-import edu.neu.cs6650.assignment4.kv.dto.KvReadResponse;
-import edu.neu.cs6650.assignment4.kv.dto.KvWriteRequest;
-import edu.neu.cs6650.assignment4.kv.dto.KvWriteResponse;
-import edu.neu.cs6650.assignment4.kv.model.VersionedValue;
-import edu.neu.cs6650.assignment4.kv.service.KvService;
-import edu.neu.cs6650.assignment4.kv.dto.ReplicationWriteRequest;
+import edu.neu.cs6650.kv.dto.KvReadResponse;
+import edu.neu.cs6650.kv.dto.KvWriteRequest;
+import edu.neu.cs6650.kv.dto.KvWriteResponse;
+import edu.neu.cs6650.kv.model.VersionedValue;
+import edu.neu.cs6650.kv.service.KvService;
+import edu.neu.cs6650.kv.dto.ReplicationWriteRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
