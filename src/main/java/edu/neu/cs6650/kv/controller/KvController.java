@@ -6,6 +6,8 @@ import edu.neu.cs6650.kv.dto.KvWriteResponse;
 import edu.neu.cs6650.kv.model.VersionedValue;
 import edu.neu.cs6650.kv.service.KvService;
 import edu.neu.cs6650.kv.dto.ReplicationWriteRequest;
+import edu.neu.cs6650.kv.dto.ShardDumpResponse;
+import edu.neu.cs6650.kv.dto.ShardImportRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -70,6 +72,23 @@ public class KvController {
     );
 
     return ResponseEntity.ok(response);
+  }
+
+  // Returns all key-value pairs stored on this node that belong to shardId.
+  // Used by the ShardController to pull data during shard migration.
+  @GetMapping("/shard/{shardId}")
+  public ResponseEntity<ShardDumpResponse> dumpShard(@PathVariable int shardId, @RequestParam(defaultValue = "4") int numShards) {
+    return ResponseEntity.ok(new ShardDumpResponse(shardId, kvService.getShardEntries(shardId, numShards)));
+  }
+
+  // Bulk-imports key-value pairs for shardId. Called by the new owner during migration.
+  @PostMapping("/shard/{shardId}/import")
+  public ResponseEntity<Void> importShard(@PathVariable int shardId, @RequestBody
+      ShardImportRequest request) {
+    if (request.getEntries() != null) {
+      kvService.importShardEntries(request.getEntries());
+    }
+    return ResponseEntity.ok().build();
   }
 
   // Internal endpoint used by the leader to push a write to this node with a fixed version.

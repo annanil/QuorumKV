@@ -1,5 +1,7 @@
 package edu.neu.cs6650.kv.service;
 
+import edu.neu.cs6650.kv.dto.ShardEntry;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -271,6 +273,28 @@ public class KvService {
         }
       }
     });
+  }
+
+  // Returns all entries in the local store whose key hashes to shardId/
+  public List<ShardEntry> getShardEntries(int shardId, int numShards) {
+    List<ShardEntry> result = new ArrayList<>();
+    for (Map.Entry<String, VersionedValue> e : store.entrySet()) {
+      if (((e.getKey().hashCode() & Integer.MAX_VALUE) % numShards) == shardId) {
+        VersionedValue v = e.getValue();
+        result.add(new ShardEntry(e.getKey(), v.getValue(), v.getVersion()));
+      }
+    }
+    return result;
+  }
+
+  // Bulk-imports shard entries received during migration, applying each as a replicated write.
+  public void importShardEntries(List<ShardEntry> entries) {
+    for (ShardEntry e : entries) {
+      VersionedValue existing = store.get(e.getKey());
+      if (existing == null || e.getVersion() > existing.getVersion()) {
+        store.put(e.getKey(), new VersionedValue(e.getKey(), e.getValue(), e.getVersion()));
+      }
+    }
   }
 
   // Parses the configured follower URLs into a clean list.
