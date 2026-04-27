@@ -35,23 +35,31 @@ jobs:
           WRITE_QUORUM: 3
           READ_QUORUM: 3
 
-      - name: Wait for leader to be healthy
+      - name: Wait for cluster to be healthy
         run: |
-          echo "Waiting for leader on localhost:8080..."
-          for i in $(seq 1 30); do
-            if curl -sf http://localhost:8080/kv?key=warmup > /dev/null 2>&1 || \
-               curl -sf -o /dev/null -w "%{http_code}" http://localhost:8080/kv?key=warmup | grep -qE "^(200|404)$"; then
-              echo "Leader is up (attempt $i)"
-              break
-            fi
-            echo "Attempt $i: not ready yet, waiting 3s..."
-            sleep 3
-            if [ "$i" -eq 30 ]; then
-              echo "ERROR: leader did not come up in time"
-              docker compose logs leader
-              exit 1
-            fi
-          done
+          wait_for_port() {
+            local port=$1
+            local name=$2
+            echo "Waiting for $name on port $port..."
+            for i in $(seq 1 30); do
+              code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:$port/kv?key=warmup 2>/dev/null || echo "000")
+              if echo "$code" | grep -qE "^(200|404)$"; then
+                echo "$name is up (attempt $i)"
+                return 0
+              fi
+              echo "Attempt $i: $name not ready (code=$code), waiting 3s..."
+              sleep 3
+            done
+            echo "ERROR: $name did not come up in time"
+            return 1
+          }
+
+          wait_for_port 8080 "leader"    || { docker compose logs leader;    exit 1; }
+          wait_for_port 8081 "follower1" || { docker compose logs follower1; exit 1; }
+          wait_for_port 8082 "follower2" || { docker compose logs follower2; exit 1; }
+          wait_for_port 8083 "follower3" || { docker compose logs follower3; exit 1; }
+          wait_for_port 8084 "follower4" || { docker compose logs follower4; exit 1; }
+          echo "All nodes ready"
 
       - name: Run smoke test (500 requests, 50% writes)
         working-directory: load-tester
