@@ -1,0 +1,68 @@
+services:
+
+  # ── Group 0: shards 0,1 initially ─────────────────────────────────────────────
+  g0-leader:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      NODE_ROLE: leader
+      NODE_FOLLOWER_URLS: "http://g0-f1:8080,http://g0-f2:8080"
+      NODE_WRITE_QUORUM_SIZE: ${WRITE_QUORUM:-3}
+      NODE_READ_QUORUM_SIZE: ${READ_QUORUM:-3}
+
+  g0-f1:
+    build: .
+    ports:
+      - "8081:8080"
+    environment:
+      NODE_ROLE: follower
+
+  g0-f2:
+    build: .
+    ports:
+      - "8082:8080"
+    environment:
+      NODE_ROLE: follower
+
+  # ── Group 1: shards 2,3 initially ─────────────────────────────────────────────
+  g1-leader:
+    build: .
+    ports:
+      - "8083:8080"
+    environment:
+      NODE_ROLE: leader
+      NODE_FOLLOWER_URLS: "http://g1-f1:8080,http://g1-f2:8080"
+      NODE_WRITE_QUORUM_SIZE: ${WRITE_QUORUM:-3}
+      NODE_READ_QUORUM_SIZE: ${READ_QUORUM:-3}
+
+  g1-f1:
+    build: .
+    ports:
+      - "8084:8080"
+    environment:
+      NODE_ROLE: follower
+
+  g1-f2:
+    build: .
+    ports:
+      - "8085:8080"
+    environment:
+      NODE_ROLE: follower
+
+  # ── ShardController ────────────────────────────────────────────────────────────
+  shard-controller:
+    build: ./shard-controller
+    ports:
+      - "8090:8090"
+    environment:
+      SHARD_NUM_SHARDS: 4
+      SHARD_GROUP0_LEADER_URL: "http://g0-leader:8080"
+      SHARD_GROUP0_NODE_URLS: "http://g0-leader:8080,http://g0-f1:8080,http://g0-f2:8080"
+      SHARD_GROUP0_INITIAL_SHARD_IDS: "0,1"
+      SHARD_GROUP1_LEADER_URL: "http://g1-leader:8080"
+      SHARD_GROUP1_NODE_URLS: "http://g1-leader:8080,http://g1-f1:8080,http://g1-f2:8080"
+      SHARD_GROUP1_INITIAL_SHARD_IDS: "2,3"
+    depends_on:
+      - g0-leader
+      - g1-leader
