@@ -32,7 +32,7 @@ public class StatsController {
   // Collected intervals for CSV output
   private final ConcurrentLinkedQueue<Long> readWriteIntervals = new ConcurrentLinkedQueue<>();
 
-  public void recordWrite(String key, int version, long latency, int responseCode) {
+  public void recordWrite(String key, int version, long latency, int responseCode, int shardId) {
     long now = System.currentTimeMillis();
     boolean success = (responseCode == 201 || responseCode == 200);
 
@@ -48,10 +48,10 @@ public class StatsController {
       writeFailure.incrementAndGet();
     }
 
-    latencyRecords.add(new LatencyRecord(now, "PUT", latency, responseCode, key, version, false));
+    latencyRecords.add(new LatencyRecord(now, "PUT", latency, responseCode, key, version, false, shardId));
   }
 
-  public void recordRead(String key, int version, long latency, int responseCode, boolean found) {
+  public void recordRead(String key, int version, long latency, int responseCode, boolean found, int shardId) {
     long now = System.currentTimeMillis();
     boolean success = (responseCode == 200 || responseCode == 404);
     boolean stale = false;
@@ -79,7 +79,7 @@ public class StatsController {
       readFailure.incrementAndGet();
     }
 
-    latencyRecords.add(new LatencyRecord(now, "GET", latency, responseCode, key, version, stale));
+    latencyRecords.add(new LatencyRecord(now, "GET", latency, responseCode, key, version, stale, shardId));
   }
 
   public void writeLatencyCSV(String filename) {
@@ -180,25 +180,9 @@ public class StatsController {
     return sortedValues.get(index);
   }
 
-  // -- Getters for final summary --
-
-  public int getStaleReadCount() {
-    return staleReadCount.get();
-  }
-
-  public int getTotalSuccess() {
-    return readSuccess.get() + writeSuccess.get();
-  }
-
-  public int getTotalFailure() {
-    return readFailure.get() + writeFailure.get();
-  }
-
-  public int getReadSuccess() {
-    return readSuccess.get();
-  }
-
-  public int getWriteSuccess() {
-    return writeSuccess.get();
-  }
+  public int getStaleReadCount() { return staleReadCount.get(); }
+  public int getTotalSuccess() { return readSuccess.get() + writeSuccess.get(); }
+  public int getTotalFailure() { return readFailure.get() + writeFailure.get(); }
+  public int getReadSuccess() { return readSuccess.get(); }
+  public int getWriteSuccess() { return writeSuccess.get(); }
 }

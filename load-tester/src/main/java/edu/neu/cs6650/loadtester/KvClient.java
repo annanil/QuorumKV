@@ -59,7 +59,7 @@ public class KvClient {
           }
         }
 
-        return new PutResult(key, version, latency, statusCode);
+        return new PutResult(key, version, latency, statusCode, -1);
 
       } catch (Exception e) {
         if (attempt < MAX_RETRIES - 1) {
@@ -67,12 +67,12 @@ public class KvClient {
             Thread.sleep(100L * (attempt + 1));
           } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
-            return new PutResult(key, -1, 0, -1);
+            return new PutResult(key, -1, 0, -1, -1);
           }
         }
       }
     }
-    return new PutResult(key, -1, 0, -1);
+    return new PutResult(key, -1, 0, -1, -1);
   }
 
   public GetResult get(String key) {
@@ -130,12 +130,14 @@ public class KvClient {
     public final int version;
     public final long latency;
     public final int responseCode;
+    public final int shardId;
 
-    public PutResult(String key, int version, long latency, int responseCode) {
+    public PutResult(String key, int version, long latency, int responseCode, int shardId) {
       this.key = key;
       this.version = version;
       this.latency = latency;
       this.responseCode = responseCode;
+      this.shardId = shardId;
     }
   }
 
@@ -147,15 +149,22 @@ public class KvClient {
     public final long latency;
     public final int responseCode;
     public final boolean found;
+    public final int shardId;
 
     public GetResult(String key, String value, int version, long latency, int responseCode,
         boolean found) {
+      this(key, value, version, latency, responseCode, found, -1);
+    }
+
+    public GetResult(String key, String value, int version, long latency, int responseCode,
+        boolean found, int shardId) {
       this.key = key;
       this.value = value;
       this.version = version;
       this.latency = latency;
       this.responseCode = responseCode;
       this.found = found;
+      this.shardId = shardId;
     }
   }
 }

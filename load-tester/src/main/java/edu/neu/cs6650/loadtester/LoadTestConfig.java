@@ -1,5 +1,7 @@
 package edu.neu.cs6650.loadtester;
 
+import lombok.Data;
+
 /**
  * Parses CLI arguments into a typed config object.
  * <p>
@@ -12,6 +14,7 @@ package edu.neu.cs6650.loadtester;
  * Key pool size for temporal locality (default: 50)
  */
 
+@Data
 public class LoadTestConfig {
 
   private String writeUrl;
@@ -21,6 +24,9 @@ public class LoadTestConfig {
   private int numThreads = 16;
   private int writePercentage = 50;
   private int numKeys = 10;
+  private String mode = "leader";
+  private String shardControllerUrl = null;
+  private boolean migrationTest = false;
 
   public static LoadTestConfig fromArgs(String[] args) {
     LoadTestConfig config = new LoadTestConfig();
@@ -39,48 +45,26 @@ public class LoadTestConfig {
         config.writePercentage = Integer.parseInt(arg.substring("--write-pct=".length()));
       } else if (arg.startsWith("--num-keys=")) {
         config.numKeys = Integer.parseInt(arg.substring("--num-keys=".length()));
+      } else if (arg.startsWith("--mode=")) {
+        config.mode = arg.substring("--mode=".length());
+      } else if (arg.startsWith("--shard-controller=")) {
+        config.shardControllerUrl = arg.substring("--shard-controller=".length());
+      } else if (arg.startsWith("--migration-test=")) {
+        config.migrationTest = true;
       }
     }
 
-    if (config.writeUrl == null) {
-      throw new IllegalArgumentException("--write-url is required");
+    if (config.shardControllerUrl == null && config.writeUrl == null) {
+      throw new IllegalArgumentException("--write-url is required (or use --shard-controller)");
     }
     if (config.readUrl == null) {
-      config.readUrl = config.writeUrl;
+      config.readUrl = config.writeUrl != null ? config.writeUrl : config.shardControllerUrl;
     }
 
     config.writeUrl = config.writeUrl.replaceAll("/+$", "");
     config.readUrl = config.readUrl.replaceAll("/+$", "");
 
     return config;
-  }
-
-  public String getWriteUrl() {
-    return writeUrl;
-  }
-
-  public String getReadUrl() {
-    return readUrl;
-  }
-
-  public String getConfigName() {
-    return configName;
-  }
-
-  public int getTotalRequests() {
-    return totalRequests;
-  }
-
-  public int getNumThreads() {
-    return numThreads;
-  }
-
-  public int getWritePercentage() {
-    return writePercentage;
-  }
-
-  public int getNumKeys() {
-    return numKeys;
   }
 
   @Override
