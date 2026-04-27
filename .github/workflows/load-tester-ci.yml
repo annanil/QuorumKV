@@ -20,6 +20,9 @@ jobs:
           java-version: "17"
           distribution: "temurin"
 
+      - name: Build shard-controller JAR
+        run: cd shard-controller && mvn install -DskipTests -q
+
       - name: Build server JAR
         run: ./mvnw package -DskipTests -q
 
