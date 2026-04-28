@@ -1,5 +1,7 @@
 package edu.neu.cs6650.kv.config;
 
+import java.util.concurrent.TimeUnit;
+import org.apache.hc.client5.http.config.RequestConfig;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
@@ -17,8 +19,15 @@ public class AppConfig {
     connManager.setMaxTotal(200);           // total connections across all routes
     connManager.setDefaultMaxPerRoute(50);  // per-host (follower/peer) limit
 
+    RequestConfig requestConfig = RequestConfig.custom()
+        .setConnectTimeout(2, TimeUnit.SECONDS)        // TCP handshake
+        .setResponseTimeout(5, TimeUnit.SECONDS)       // time to first byte of response
+        .setConnectionRequestTimeout(2, TimeUnit.SECONDS) // wait for a connection from the pool
+        .build();
+
     CloseableHttpClient httpClient = HttpClients.custom()
         .setConnectionManager(connManager)
+        .setDefaultRequestConfig(requestConfig)
         .build();
 
     HttpComponentsClientHttpRequestFactory factory =
