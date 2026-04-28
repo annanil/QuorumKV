@@ -37,8 +37,17 @@ public class ShardAwareKvClient {
 
   private static final int MAX_RETRIES = 3;
 
+  // When true, reads are sent to a random replica in the shard group (/kv?key=)
+  // rather than the leader's quorum-read endpoint (/leader/kv?key=).
+  private final boolean replicaReads;
+
   public ShardAwareKvClient(String shardControllerUrl) {
+    this(shardControllerUrl, false);
+  }
+
+  public ShardAwareKvClient(String shardControllerUrl, boolean replicaReads) {
     this.shardControllerUrl = shardControllerUrl.replaceAll("/+$", "");
+    this.replicaReads = replicaReads;
     this.gson = new Gson();
     this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
   }
@@ -76,6 +85,9 @@ public class ShardAwareKvClient {
 
   public KvClient.PutResult put(String key, String value) {
     ShardConfig cfg = config.get();
+    if (cfg == null) {
+      return new KvClient.PutResult(key, -1, 0, -1, -1);
+    }
     int shardId = cfg.getShardId(key);
     String leaderUrl = cfg.getLeaderUrlForKey(key);
     if (leaderUrl == null) {
@@ -123,19 +135,23 @@ public class ShardAwareKvClient {
 
   public KvClient.GetResult get(String key) {
     ShardConfig cfg = config.get();
+    if (cfg == null) {
+      return new KvClient.GetResult(key, "", -1, 0, -1, false, -1);
+    }
     int shardId = cfg.getShardId(key);
-    String leaderUrl = cfg.getLeaderUrlForKey(key);
-    if (leaderUrl == null) {
+    String readUrl = replicaReads ? cfg.getReplicaUrlForKey(key) : cfg.getLeaderUrlForKey(key);
+    if (readUrl == null) {
       return new GetResult(key, "", -1, 0, -1, false, shardId);
     }
 
     String encodedKey = URLEncoder.encode(key, StandardCharsets.UTF_8);
+    String readEndpoint = replicaReads ? "/kv?key=" : "/leader/kv?key=";
 
     for (int attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
         long start = System.currentTimeMillis();
         HttpRequest req = HttpRequest.newBuilder()
-            .uri(URI.create(leaderUrl + "/leader/kv?key=" + encodedKey))
+            .uri(URI.create(readUrl + readEndpoint + encodedKey))
             .GET()
             .timeout(Duration.ofSeconds(30))
             .build();

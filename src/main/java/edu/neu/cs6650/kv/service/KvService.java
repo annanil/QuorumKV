@@ -11,6 +11,8 @@ import edu.neu.cs6650.kv.model.VersionedValue;
 import edu.neu.cs6650.kv.dto.KvReadResponse;
 import edu.neu.cs6650.kv.dto.ReplicationWriteRequest;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +24,8 @@ import org.springframework.web.client.RestTemplate;
 
 @Service
 public class KvService {
+
+  private static final Logger log = LoggerFactory.getLogger(KvService.class);
 
   private final NodeProperties nodeProperties;
   private final RestTemplate restTemplate;
@@ -59,7 +63,12 @@ public class KvService {
       );
 
       for (String followerUrl : getFollowerUrlList()) {
-        restTemplate.put(followerUrl + "/kv/internal/write", request);
+        try {
+          restTemplate.put(followerUrl + "/kv/internal/write", request);
+        } catch (RestClientException e) {
+          log.warn("Replication to {} failed for key={} v={}: {}", followerUrl,
+              storedValue.getKey(), storedValue.getVersion(), e.getMessage());
+        }
       }
     }
 

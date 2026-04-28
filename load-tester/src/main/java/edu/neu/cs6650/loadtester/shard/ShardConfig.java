@@ -1,6 +1,7 @@
 package edu.neu.cs6650.loadtester.shard;
 
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 import lombok.Data;
 
 @Data
@@ -24,5 +25,18 @@ public class ShardConfig {
 
   public int getShardId(String key) {
     return (key.hashCode() & Integer.MAX_VALUE) % numShards;
+  }
+
+  // Returns a random replica URL from the shard group that owns the given key.
+  // Falls back to the leader URL if nodeUrls is unavailable.
+  public String getReplicaUrlForKey(String key) {
+    int shardId = (key.hashCode() & Integer.MAX_VALUE) % numShards;
+    Integer groupId = groupAssignments.get(String.valueOf(shardId));
+    if (groupId == null) { return null; }
+    GroupConfig group = groups.get(String.valueOf(groupId));
+    if (group == null) { return null; }
+    java.util.List<String> nodes = group.getNodeUrls();
+    if (nodes == null || nodes.isEmpty()) { return group.getLeaderUrl(); }
+    return nodes.get(ThreadLocalRandom.current().nextInt(nodes.size()));
   }
 }

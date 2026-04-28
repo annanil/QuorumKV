@@ -16,7 +16,10 @@ public class LoadTester {
     System.out.println("Starting load test: " + config);
 
     if (config.getShardControllerUrl() != null) {
-      ShardAwareKvClient shardClient = new ShardAwareKvClient(config.getShardControllerUrl());
+      boolean replicaReads = config.getReadUrl() != null
+          && !config.getReadUrl().equals(config.getShardControllerUrl());
+      ShardAwareKvClient shardClient =
+          new ShardAwareKvClient(config.getShardControllerUrl(), replicaReads);
       shardClient.init();
       try {
         runSharded(config, shardClient);
