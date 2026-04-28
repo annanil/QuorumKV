@@ -24,7 +24,7 @@ jobs:
         run: cd shard-controller && mvn install -DskipTests -q
 
       - name: Build server JAR
-        run: ./mvnw package -DskipTests -q
+        run: ./mvnw package -DskipTests -q && cp target/assignment4-kv-0.0.1-SNAPSHOT.jar app.jar
 
       - name: Build load-tester JAR
         run: cd load-tester && mvn package -DskipTests -q
