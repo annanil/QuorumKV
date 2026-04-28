@@ -17,8 +17,8 @@ locals {
   ])
 
   leader_follower_urls = [
-    for follower in aws_instance.followers :
-    "http://${follower.private_ip}:${var.app_port}"
+    for i in range(1, var.db_node_count) :
+    "http://${local.node_private_ips[i]}:${var.app_port}"
   ]
 }
 

@@ -7,7 +7,7 @@ variable "region" {
 variable "project_name" {
   description = "Name prefix applied to AWS resources."
   type        = string
-  default     = "assignment4-kv"
+  default     = "quorum-kv"
 }
 
 variable "vpc_id" {

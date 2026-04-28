@@ -9,7 +9,7 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>edu.neu.cs6650</groupId>
-	<artifactId>assignment4-kv</artifactId>
+	<artifactId>quorum-kv</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name/>
 	<description/>

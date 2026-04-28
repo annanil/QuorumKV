@@ -34,8 +34,8 @@ public class LoadTester {
 
   private static void runDirect(LoadTestConfig config) {
     String[] keys = buildKeyPool(config.getNumKeys());
-    KvClient writeClient = new KvClient(config.getWriteUrl());
-    KvClient readClient = new KvClient(config.getReadUrl());
+    KvClient writeClient = new KvClient(config.getWriteUrl(), config.getMode());
+    KvClient readClient = new KvClient(config.getReadUrl(), config.getMode());
     StatsController stats = new StatsController();
     AtomicInteger completedRequests = new AtomicInteger(0);
     int numThreads = config.getNumThreads();

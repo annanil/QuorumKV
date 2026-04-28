@@ -219,7 +219,7 @@ docker login
 Edit `terraform/terraform.tfvars`:
 ```hcl
 region            = "us-east-1"
-app_image         = "<your-dockerhub-username>/assignment4-kv:latest"
+app_image         = "<your-dockerhub-username>/quorum-kv:latest"
 write_quorum_size = 5
 read_quorum_size  = 1
 subnet_ids        = ["subnet-0937c8ad4880238d4","subnet-0111689a3365d0f52",

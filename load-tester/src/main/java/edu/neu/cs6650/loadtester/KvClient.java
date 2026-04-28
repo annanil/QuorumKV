@@ -14,15 +14,31 @@ public class KvClient {
 
   private final HttpClient httpClient;
   private final String baseUrl;
+  private final String writeEndpoint;
+  private final String readEndpoint;
   private final Gson gson;
   private static final int MAX_RETRIES = 5;
 
   public KvClient(String baseUrl) {
+    this(baseUrl, "basic");
+  }
+
+  /**
+   * @param mode "leader"     → /leader/kv   (W-quorum, R-quorum — use for NWR experiments)
+   *             "leaderless" → /leaderless/kv
+   *             "basic"      → /kv           (replicates to all, ignores W/R config)
+   */
+  public KvClient(String baseUrl, String mode) {
     this.baseUrl = baseUrl;
     this.gson = new Gson();
     this.httpClient = HttpClient.newBuilder()
         .connectTimeout(Duration.ofSeconds(30))
         .build();
+    switch (mode) {
+      case "leader"     -> { writeEndpoint = "/leader/kv";     readEndpoint = "/leader/kv"; }
+      case "leaderless" -> { writeEndpoint = "/leaderless/kv"; readEndpoint = "/leaderless/kv"; }
+      default           -> { writeEndpoint = "/kv";            readEndpoint = "/kv"; }
+    }
   }
 
   public PutResult put(String key, String value) {
@@ -36,7 +52,7 @@ public class KvClient {
         long startTime = System.currentTimeMillis();
 
         HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create(baseUrl + "/kv"))
+            .uri(URI.create(baseUrl + writeEndpoint))
             .header("Content-Type", "application/json")
             .PUT(HttpRequest.BodyPublishers.ofString(jsonBody))
             .timeout(Duration.ofSeconds(30))
@@ -83,7 +99,7 @@ public class KvClient {
         long startTime = System.currentTimeMillis();
 
         HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create(baseUrl + "/kv?key=" + encodedKey))
+            .uri(URI.create(baseUrl + readEndpoint + "?key=" + encodedKey))
             .header("Content-Type", "application/json")
             .GET()
             .timeout(Duration.ofSeconds(30))
