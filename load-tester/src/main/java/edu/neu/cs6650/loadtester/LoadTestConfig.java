@@ -61,8 +61,8 @@ public class LoadTestConfig {
       config.readUrl = config.writeUrl != null ? config.writeUrl : config.shardControllerUrl;
     }
 
-    config.writeUrl = config.writeUrl.replaceAll("/+$", "");
-    config.readUrl = config.readUrl.replaceAll("/+$", "");
+    if (config.writeUrl != null) config.writeUrl = config.writeUrl.replaceAll("/+$", "");
+    if (config.readUrl  != null) config.readUrl  = config.readUrl.replaceAll("/+$", "");
 
     return config;
   }
