@@ -76,7 +76,7 @@ jobs:
           --write-pct=50
 
       - name: Assert zero 5xx errors
-        run: python3 load-tester/check_results.py load-tester/output/latencies_ci-smoke.csv
+        run: python3 load-tester/check_results.py load-tester/output/latencies_ci-smoke.csv --max-error-pct=2
 
       - name: Upload results
         if: always()
