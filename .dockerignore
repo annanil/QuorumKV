@@ -1,6 +1,11 @@
 .git
 .idea
-target
-!target/assignment4-kv-0.0.1-SNAPSHOT.jar
+target/classes
+target/test-classes
+target/generated-sources
+target/generated-test-sources
+target/maven-archiver
+target/maven-status
+target/surefire-reports
 .DS_Store
 *.iml
