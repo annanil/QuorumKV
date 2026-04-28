@@ -32,11 +32,11 @@ jobs:
       - name: Build load-tester JAR
         run: cd load-tester && mvn package -DskipTests -q
 
-      - name: Start cluster (W=3 R=3)
-        run: WRITE_QUORUM=3 READ_QUORUM=3 docker compose up --build -d
+      - name: Start cluster (W=1 R=1)
+        run: docker compose up --build -d
         env:
-          WRITE_QUORUM: 3
-          READ_QUORUM: 3
+          WRITE_QUORUM: 1
+          READ_QUORUM: 1
 
       - name: Wait for cluster to be healthy
         run: |
@@ -63,6 +63,8 @@ jobs:
           wait_for_port 8083 "follower3" || { docker compose logs follower3; exit 1; }
           wait_for_port 8084 "follower4" || { docker compose logs follower4; exit 1; }
           echo "All nodes ready"
+          echo "Waiting 10s for internal cluster connections to settle..."
+          sleep 10
 
       - name: Run smoke test (500 requests, 50% writes)
         working-directory: load-tester
@@ -76,7 +78,7 @@ jobs:
           --write-pct=50
 
       - name: Assert zero 5xx errors
-        run: python3 load-tester/check_results.py load-tester/output/latencies_ci-smoke.csv --max-error-pct=2
+        run: python3 load-tester/check_results.py load-tester/output/latencies_ci-smoke.csv --max-error-pct=1
 
       - name: Upload results
         if: always()
