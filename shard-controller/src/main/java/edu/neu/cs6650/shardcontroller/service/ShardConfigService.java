@@ -94,8 +94,8 @@ public class ShardConfigService {
     return newConfig;
   }
 
-  private void migrateData(int shardId, int numShard, String donorLeader, String recipientLeader) {
-    String dumpUrl = donorLeader + "/kv/shard/" + shardId + "?numShard=" + numShard;
+  private void migrateData(int shardId, int numShards, String donorLeader, String recipientLeader) {
+    String dumpUrl = donorLeader + "/kv/shard/" + shardId + "?numShards=" + numShards;
     ShardDumpResponse dump = restTemplate.getForObject(dumpUrl, ShardDumpResponse.class);
 
     if (dump == null || dump.getEntries() == null || dump.getEntries().isEmpty()) {
