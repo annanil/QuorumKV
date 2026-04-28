@@ -45,19 +45,10 @@ public class KvService {
     // Simulates write latency for the local node.
     sleepMillis(200);
 
-    VersionedValue storedValue;
-    VersionedValue existing = store.get(key);
-
-    // First write to a key starts at version 1.
-    if (existing == null) {
-      storedValue = new VersionedValue(key, value, 1);
-      store.put(key, storedValue);
-    } else {
-      // Later writes overwrite the value and increment the logical version.
-      existing.setValue(value);
-      existing.setVersion(existing.getVersion() + 1);
-      storedValue = existing;
-    }
+    VersionedValue storedValue = store.compute(key, (k, existing) ->
+        existing == null
+            ? new VersionedValue(k, value, 1)
+            : new VersionedValue(k, value, existing.getVersion() + 1));
 
     // In leader mode, forward the write to all configured followers.
     if ("leader".equalsIgnoreCase(nodeProperties.getRole())) {
@@ -99,17 +90,10 @@ public class KvService {
   public VersionedValue leaderWrite(String key, String value, int writeQuorum) {
     sleepMillis(200);
 
-    VersionedValue storedValue;
-    VersionedValue existing = store.get(key);
-
-    if (existing == null) {
-      storedValue = new VersionedValue(key, value, 1);
-      store.put(key, storedValue);
-    } else {
-      existing.setValue(value);
-      existing.setVersion(existing.getVersion() + 1);
-      storedValue = existing;
-    }
+    VersionedValue storedValue = store.compute(key, (k, existing) ->
+        existing == null
+            ? new VersionedValue(k, value, 1)
+            : new VersionedValue(k, value, existing.getVersion() + 1));
 
     List<String> followers = getFollowerUrlList();
     ReplicationWriteRequest request = new ReplicationWriteRequest(
@@ -148,18 +132,10 @@ public class KvService {
   public VersionedValue leaderlessWrite(String key, String value, int writeQuorum) {
     sleepMillis(200); // local write latency
 
-    VersionedValue storedValue;
-    VersionedValue existing = store.get(key);
-
-    // write to local store, incrementing version
-    if (existing == null) {
-      storedValue = new VersionedValue(key, value, 1); // first write starts at version 1
-      store.put(key, storedValue);
-    } else {
-      existing.setValue(value);
-      existing.setVersion(existing.getVersion() + 1); // bump version on update
-      storedValue = existing;
-    }
+    VersionedValue storedValue = store.compute(key, (k, existing) ->
+        existing == null
+            ? new VersionedValue(k, value, 1)
+            : new VersionedValue(k, value, existing.getVersion() + 1));
 
     // build replication request with the committed version
     ReplicationWriteRequest request = new ReplicationWriteRequest(

@@ -1,9 +1,9 @@
 package edu.neu.cs6650.kv.model;
 
 public class VersionedValue {
-  private String key;
-  private String value;
-  private int version;
+  private final String key;
+  private final String value;
+  private final int version;
 
   public VersionedValue(String key, String value, int version) {
     this.key = key;
@@ -23,11 +23,4 @@ public class VersionedValue {
     return version;
   }
 
-  public void setValue(String value) {
-    this.value = value;
-  }
-
-  public void setVersion(int version) {
-    this.version = version;
-  }
 }
