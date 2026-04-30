@@ -20,6 +20,7 @@ public class AppConfig {
 
     RequestConfig requestConfig = RequestConfig.custom()
         .setConnectTimeout(Timeout.ofSeconds(5))
+        .setResponseTimeout(Timeout.ofSeconds(5))
         .setConnectionRequestTimeout(Timeout.ofSeconds(5))
         .build();
 

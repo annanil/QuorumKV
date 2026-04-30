@@ -21,7 +21,10 @@ jobs:
           distribution: "temurin"
 
       - name: Build shard-controller JAR
-        run: cd shard-controller && mvn install -DskipTests -q
+        run: |
+          cd shard-controller
+          mvn package -DskipTests -q
+          find target -name "*.jar" ! -name "*.original" | head -1 | xargs -I{} cp {} app.jar
 
       - name: Build server JAR
         run: |
