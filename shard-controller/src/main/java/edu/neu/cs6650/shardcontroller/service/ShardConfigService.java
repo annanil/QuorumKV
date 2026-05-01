@@ -82,7 +82,12 @@ public class ShardConfigService {
 
     log.info("Migrating shard {} from group {} ({}) to group {} ({})", shardToMigrate, donorId, donor.getLeaderUrl(), recipientId, recipient.getLeaderUrl());
 
-    migrateData(shardToMigrate, config.getNumShards(), donor.getLeaderUrl(), recipient.getLeaderUrl());
+    try {
+      migrateData(shardToMigrate, config.getNumShards(), donor.getLeaderUrl(), recipient.getLeaderUrl());
+    } catch (Exception e) {
+      log.error("Migration of shard {} failed — config unchanged: {}", shardToMigrate, e.getMessage());
+      throw new IllegalStateException("Shard migration failed, cluster state unchanged", e);
+    }
 
     Map<Integer, Integer> newAssignments = new HashMap<>(config.getGroupAssignments());
     newAssignments.put(shardToMigrate, recipientId);
@@ -96,7 +101,7 @@ public class ShardConfigService {
 
   private void migrateData(int shardId, int numShards, String donorLeader, String recipientLeader) {
     String dumpUrl = donorLeader + "/kv/shard/" + shardId + "?numShards=" + numShards;
-    ShardDumpResponse dump = restTemplate.getForObject(dumpUrl, ShardDumpResponse.class);
+    ShardDumpResponse dump = fetchWithRetry(dumpUrl);
 
     if (dump == null || dump.getEntries() == null || dump.getEntries().isEmpty()) {
       log.info("Shard {} has no entries to migrate", shardId);
@@ -105,7 +110,29 @@ public class ShardConfigService {
 
     log.info("Migrating {} entries for shard {}", dump.getEntries().size(), shardId);
     String importUrl = recipientLeader + "/kv/shard/" + shardId + "/import";
-    restTemplate.postForObject(importUrl, new ShardImportRequest(dump.getEntries()), void.class);
+
+    int attempts = 0;
+    while (true) {
+      try {
+        restTemplate.postForObject(importUrl, new ShardImportRequest(dump.getEntries()), void.class);
+        return;
+      } catch (Exception e) {
+        if (++attempts >= 3) throw e;
+        log.warn("Import attempt {} for shard {} failed, retrying: {}", attempts, shardId, e.getMessage());
+      }
+    }
+  }
+
+  private ShardDumpResponse fetchWithRetry(String url) {
+    int attempts = 0;
+    while (true) {
+      try {
+        return restTemplate.getForObject(url, ShardDumpResponse.class);
+      } catch (Exception e) {
+        if (++attempts >= 3) throw e;
+        log.warn("Dump fetch attempt {} failed, retrying: {}", attempts, e.getMessage());
+      }
+    }
   }
 
   private List<Integer> parseIds(String csv) {

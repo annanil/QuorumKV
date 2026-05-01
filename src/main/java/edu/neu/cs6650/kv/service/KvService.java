@@ -229,6 +229,7 @@ public class KvService {
         break;
       }
       try {
+        sleepMillis(50);
         ResponseEntity<KvReadResponse> resp = restTemplate.getForEntity(
             url + "/kv/local_read?key=" + key, KvReadResponse.class);
         readsReceived++;
