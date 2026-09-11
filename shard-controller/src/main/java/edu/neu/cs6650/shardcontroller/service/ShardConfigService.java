@@ -61,7 +61,12 @@ public class ShardConfigService {
   public synchronized ShardConfig rebalance() {
     ShardConfig config = currentConfig.get();
 
+    // Seed every configured group, including ones that currently own zero shards — otherwise a
+    // group with no shards never appears as a rebalance candidate and can never receive one.
     Map<Integer, List<Integer>> groupToShards = new HashMap<>();
+    for (Integer groupId : config.getGroups().keySet()) {
+      groupToShards.put(groupId, new ArrayList<>());
+    }
     for (Map.Entry<Integer, Integer> e : config.getGroupAssignments().entrySet()) {
       groupToShards.computeIfAbsent(e.getValue(), k -> new ArrayList<>()).add(e.getKey());
     }

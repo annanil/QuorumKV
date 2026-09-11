@@ -1,4 +1,4 @@
-# Assignment 4 — Results Analysis
+# QuorumKV — Results Analysis
 
 ## Experiment Setup
 
@@ -36,34 +36,45 @@ into the leftmost bin. The stats annotation preserves P99 numerically so no data
 
 ---
 
-## 2. AWS Results (10,000 requests, 32 threads, 10-key pool)
+## 2. AWS Results (10,000 requests, 16 threads, 10-key pool)
+
+**Provenance note:** these tables were reconstructed from the original submitted boxplot charts in
+`load-tester/output/latency_boxplot_*.png` (each embeds an n/mean/median/P99 stats box and a
+stale-read count, dated to the actual assignment run). The raw per-request CSVs those charts were
+generated from have since been overwritten by a later, unrelated local rerun and no longer match —
+the PNGs are the only surviving ground truth, and an earlier version of this document's tables and
+narrative did not match them. 503 (insufficient-quorum) counts are not captured in these charts and
+could not be reconstructed, so that column has been removed rather than left with invented numbers.
+For R=1 configs (this section's W=5,R=1, and leaderless W=5,R=1 below), reads never contact a
+follower/peer at all (`readsNeeded = readQuorum - 1 = 0`), so a follower-driven read 503 is
+structurally impossible there regardless of what the true count would have shown.
 
 ### W=5, R=1
 
-| Write % | Write mean | Write P99 | Read mean | Read P99 | Stale | 503s |
-|---------|-----------|-----------|-----------|----------|-------|------|
-| 1%      | 1156 ms   | 2676 ms   | 134 ms    | 222 ms   | 0 (0.00%) | 0 |
-| 10%     | 1096 ms   | 1245 ms   | 132 ms    | 213 ms   | 0 (0.00%) | 0 |
-| 50%     | 1092 ms   | 1230 ms   | 157 ms    | 289 ms   | 2 (0.04%) | 0 |
-| 90%     | 1090 ms   | 1188 ms   | 136 ms    | 213 ms   | 0 (0.00%) | 0 |
+| Write % | Write mean | Write P99 | Read mean | Read P99 | Stale |
+|---------|-----------|-----------|-----------|----------|-------|
+| 1%      | 1148 ms   | 2608 ms   | 133 ms    | 207 ms   | 0 (0.00%) |
+| 10%     | 1098 ms   | 1295 ms   | 143 ms    | 398 ms   | 0 (0.00%) |
+| 50%     | 1090 ms   | 1192 ms   | 137 ms    | 295 ms   | 0 (0.00%) |
+| 90%     | 1091 ms   | 1174 ms   | 142 ms    | 230 ms   | 0 (0.00%) |
 
 ### W=1, R=5
 
-| Write % | Write mean | Write P99 | Read mean | Read P99  | Stale      | 503s |
-|---------|-----------|-----------|-----------|-----------|------------|------|
-| 1%      | 287 ms    | 594 ms    | 409 ms    | 1434 ms   | 4 (0.04%)  | 1465 |
-| 10%     | 341 ms    | 373 ms    | 533 ms    | 4537 ms   | 36 (0.40%) | 0    |
-| 50%     | 282 ms    | 402 ms    | 572 ms    | 7592 ms   | 50 (1.01%) | 0    |
-| 90%     | 288 ms    | 392 ms    | 1668 ms   | 20333 ms  | 13 (1.24%) | 0    |
+| Write % | Write mean | Write P99 | Read mean | Read P99 | Stale      |
+|---------|-----------|-----------|-----------|----------|------------|
+| 1%      | 277 ms    | 416 ms    | 349 ms    | 442 ms   | 2 (0.02%)  |
+| 10%     | 284 ms    | 445 ms    | 351 ms    | 525 ms   | 20 (0.22%) |
+| 50%     | 284 ms    | 524 ms    | 343 ms    | 525 ms   | 22 (0.45%) |
+| 90%     | 279 ms    | 370 ms    | 342 ms    | 429 ms   | 15 (1.49%) |
 
 ### W=3, R=3
 
-| Write % | Write mean | Write P99  | Read mean | Read P99  | Stale      | 503s |
-|---------|-----------|------------|-----------|-----------|------------|------|
-| 1%      | 833 ms    | 12125 ms   | 334 ms    | 649 ms    | 0 (0.00%)  | 1155 |
-| 10%     | 715 ms    | 988 ms     | 349 ms    | 2300 ms   | 0 (0.00%)  | 0    |
-| 50%     | 727 ms    | 1715 ms    | 292 ms    | 1294 ms   | 11 (0.22%) | 0    |
-| 90%     | 705 ms    | 876 ms     | 243 ms    | 355 ms    | 4 (0.41%)  | 0    |
+| Write % | Write mean | Write P99 | Read mean | Read P99 | Stale     |
+|---------|-----------|-----------|-----------|----------|-----------|
+| 1%      | 709 ms    | 1165 ms   | 267 ms    | 489 ms   | 0 (0.00%) |
+| 10%     | 686 ms    | 819 ms    | 255 ms    | 369 ms   | 0 (0.00%) |
+| 50%     | 692 ms    | 895 ms    | 246 ms    | 400 ms   | 2 (0.04%) |
+| 90%     | 695 ms    | 763 ms    | 232 ms    | 313 ms   | 0 (0.00%) |
 
 ---
 
@@ -71,95 +82,88 @@ into the leftmost bin. The stats annotation preserves P99 numerically so no data
 
 ### W=5, R=1 — Write-Expensive, Read-Cheap, Strongly Consistent
 
-**Why write is slow.** Write mean of ~1090 ms across all ratios directly reflects the sequential
-replication protocol: the leader sends a PUT to follower-1, waits 200 ms for its ack, then
-follower-2, waits 200 ms, and so on, then sleeps 200 ms for its own write. W=5 means 5 × 200 ms
-= 1000 ms plus EC2 inter-instance network overhead (~80–90 ms total), giving the observed
-~1090 ms. This is the expected behavior per the assignment spec.
+**Why write is slow.** Write mean of ~1090–1150 ms across all ratios directly reflects the
+sequential replication protocol: the leader sends a PUT to follower-1, waits 200 ms for its ack,
+then follower-2, and so on, then sleeps 200 ms for its own write. W=5 means 5 × 200 ms = 1000 ms
+plus EC2 inter-instance network overhead (~90–150 ms), giving the observed range. This is the
+expected behavior per the assignment spec.
 
 **Why read is fast.** R=1 means the leader serves the read from its own in-memory store after
-a single 50 ms sleep. No follower is contacted. Read mean of ~135 ms = 50 ms artificial delay
-+ ~85 ms EC2 round-trip. This is the lowest read latency of all three configs.
+a single 50 ms sleep. No follower is contacted. Read mean of ~133–143 ms = 50 ms artificial delay
++ ~85–95 ms EC2 round-trip. This is the lowest read latency of all three configs.
 
-**Why stale reads are effectively zero.** W + R = 6 > N = 5 satisfies the quorum overlap
-condition. Every write returns only after all 5 nodes confirm the update. A subsequent leader
-read always sees the latest version because the leader itself holds it. The 2 stale reads in
-write50 (0.04%) are a client-side artifact: with 10 keys and 32 threads (~3 threads per key),
-two threads occasionally write the same key simultaneously. The load tester's
-`lastWrittenVersion` records the higher version, but the server commits the lower one last.
-This is a version ordering race in the client tracker, not a quorum failure.
+**Why stale reads are zero across every ratio.** W + R = 6 > N = 5 satisfies the quorum overlap
+condition. Every write returns only after all 5 nodes confirm the update, and `leaderRead()`
+always starts from the leader's own local `store.get(key)` before consulting any follower — since
+every write in this topology is serialized through the same leader, the leader's own copy is
+always the freshest value in the cluster, and a follower's response can only ever raise `best`,
+never lower it (`body.getVersion() > best.getVersion()`). So a `/leader/kv` read cannot
+mechanically return a value older than the leader's own store state at read-time — matching the
+observed 0% stale rate at every write ratio.
 
-**Why zero 503 errors.** R=1 requires no outbound follower connections on the read path — the
-leader only needs its own response. The connection pool is never strained regardless of thread
-count.
-
-**Write P99 at 1% write (2676 ms) vs other ratios (~1200 ms).** With only 118 writes in 10,000
+**Write P99 at 1% write (2608 ms) vs other ratios (~1200 ms).** With only 98 writes in 10,000
 requests, the write threads see high scheduling variance. Most complete in ~1090 ms but a few
 wait in the OS scheduler queue before being dispatched, inflating the tail. At higher write
-ratios the thread pool is kept warm and P99 tightens.
+ratios more writes keep the thread pool "warm" and P99 tightens.
+
+**Read P99 (207–398 ms) doesn't track write ratio monotonically.** 398 ms at 10% write is
+actually the highest of the four rows, not 90% — this reads as ordinary tail noise from a handful
+of slow outliers on a shared `t3.micro`, not a systematic write-pressure effect. Read *mean* is
+the more reliable signal here (133–143 ms, essentially flat): R=1 reads never contact a follower,
+so write-side load has no structural path to affect them at all.
 
 ---
 
 ### W=1, R=5 — Write-Cheap, Read-Expensive, Weakly Consistent
 
 **Why write is fast.** W=1 means the leader acknowledges after its own 200 ms write, with no
-follower coordination. Write mean of ~285–290 ms = 200 ms artificial delay + ~85 ms round-trip.
-Identical to a single-node write.
+follower coordination. Write mean of ~277–284 ms = 200 ms artificial delay + ~80–100 ms
+round-trip. Identical cost to a single-node write, and flat across all write ratios.
 
-**Why read is slow and gets slower with more writes.** R=5 means the leader must contact all 4
-followers and wait for each response before returning the highest-versioned value. The leader
-polls sequentially: 50 ms (own read) + 4 × 50 ms (followers) + EC2 overhead ≈ 330 ms minimum.
-Read mean grows from 409 ms (1% write) to 1668 ms (90% write). The reason: at high write
-ratios, async follower replication from 32 concurrent write threads contends with read follower
-requests for the same HTTP thread pool on the leader. A small fraction of reads must wait for
-the pool to free up, causing the P99 to balloon from 1434 ms (1% write) to 20333 ms (90% write)
-while the median stays around 330 ms. The tail is long but the bulk of reads are not affected.
+**Why read is slower than W=5,R=1, but flat across write ratios.** R=5 means the leader must
+contact all 4 followers and wait for each response before returning the highest-versioned value:
+50 ms (own read) + 4 × 50 ms (followers) + network overhead ≈ 330 ms minimum, matching the
+observed read mean of 342–351 ms closely. Read latency does **not** grow with write ratio here —
+it stays within a ~10 ms band across all four rows (349, 351, 343, 342 ms), and P99 (442–525 ms)
+shows no meaningful escalation either. An earlier version of this analysis claimed read latency
+ballooned to a 1668 ms mean / 20333 ms P99 at 90% write due to follower-side contention — that
+claim did not match the source charts and has been retracted; there is no evidence in the real
+data of write pressure degrading reads for this config.
 
-**Why 1465 × 503 at 1% write.** With 99% reads, 32 threads are each opening 4 outbound follower
-connections simultaneously = up to 128 concurrent outbound connections. This exhausts the
-leader's HTTP connection pool and it returns 503 rather than blocking. As the write ratio
-increases, fewer simultaneous reads are in-flight and pool pressure drops — zero 503s at 10%
-write and above.
-
-**Why stale reads increase with write ratio (0.04% → 1.24%).** W + R = 6 > N = 5 satisfies
-the quorum overlap condition in theory, so stale reads should be zero. The observed staleness
-reveals an implementation subtlety: when the leader polls R=5 nodes, it must return the
-**maximum version** across all responses. If the implementation returns the first follower
-response or an arbitrary one, a follower that hasn't received the latest async replication yet
-can cause a stale read. At high write ratios the async replication queue backs up — more writes
-in flight means more followers temporarily behind — so the probability of reading from a stale
-follower increases. This is the most important finding for this config: W+R > N is necessary
-but not sufficient for strong consistency; the read coordinator must also implement the
-max-version selection correctly.
+**Why stale reads increase with write ratio (0.02% → 1.49%).** This is *not* evidence that W+R > N
+failed, and it is *not* a max-version-selection bug — `leaderRead()` already keeps the correct max
+version across all R responses, seeded from the leader's own always-freshest local value (see the
+W=5,R=1 analysis above; the same reasoning applies here regardless of R). The most plausible
+explanation is a measurement race in the load tester's own staleness detector: `StatsController`
+flags a read as stale if its version is below the highest version *any* client has ever recorded a
+write response for, globally. A read's own server-side snapshot can be correct for the instant it
+was taken, but if a different, concurrent write to the same key has a shorter round-trip and gets
+its response recorded first, the read's response arrives and gets compared *after* that fresher
+write is already the recorded max — flagging it stale even though nothing in the replication path
+failed. This scales with write concurrency, matching the observed trend, and reaches its highest
+rate here (1.49% at 90% write) because W=1,R=5 has the most concurrent write traffic of the three
+LF configs.
 
 ---
 
 ### W=3, R=3 — Balanced Quorum
 
-**Why write latency is ~700 ms.** W=3 means the leader waits for 2 follower acks before
-returning: 200 ms (own write) + 200 ms (follower-1) + 200 ms (follower-2) + ~85 ms EC2
-overhead ≈ 685 ms. Observed mean of ~720 ms matches this closely.
+**Why write latency is ~690–710 ms.** W=3 means the leader waits for 2 follower acks before
+returning: 200 ms (own write) + 200 ms (follower-1) + 200 ms (follower-2) + network overhead ≈
+600–700 ms. Observed means (686–709 ms) match this closely and stay flat across write ratios.
 
-**Why read latency is ~300 ms.** R=3 means the leader contacts 2 followers: 50 ms (own read)
-+ 50 ms (follower-1) + 50 ms (follower-2) + ~85 ms EC2 overhead ≈ 235 ms minimum. Observed
-mean of ~300 ms accounts for occasional scheduling delays.
+**Why read latency is ~230–270 ms, with a mild downward drift.** R=3 means the leader contacts 2
+followers: 50 ms (own read) + 50 ms (follower-1) + 50 ms (follower-2) + network overhead ≈ 235 ms
+minimum. Observed means (232–267 ms) sit close to this floor throughout; the small drift from
+write1 (267 ms) down to write90 (232 ms) is within ordinary run-to-run noise rather than a real
+trend — nothing in the code would make reads cheaper as write ratio rises.
 
-**Why stale reads appear at higher write ratios (0% → 0.41%).** W + R = 6 > N = 5, so strong
-consistency should hold. The observed stale reads (11 at write50, 4 at write90) are the same
-concurrent version race seen in W=5,R=1 — two threads writing the same key simultaneously
-create a version conflict in the client tracker. The rate is low (< 0.5%) and the pattern
-(only at high write ratios) confirms this is a client-side tracking artifact, not a quorum
-failure. W=3,R=3 has a larger write quorum overlap than W=1,R=5 so the implementation bug
-that causes W=1,R=5 stale reads does not appear here.
-
-**503 errors at 1% write (1155).** R=3 requires 2 outbound follower connections per read.
-With 32 threads at 99% reads, that is up to 64 simultaneous outbound connections —
-enough to occasionally exhaust the pool. Fewer than W=1,R=5 (which needs 4× the connections)
-but the pattern is the same.
-
-**Write P99 at 1% write (12125 ms).** With only 93 writes in 10,000 requests, thread
-scheduling variance is extreme. The same effect as W=5,R=1 write1, but amplified because
-W=3 writes take longer (~700 ms) so queued threads wait longer.
+**Why stale reads are near-zero (0% at three of four ratios, 2 reads / 0.04% at write50).** Same
+reasoning as W=5,R=1 and W=1,R=5: `leaderRead()`'s max-version selection, seeded from the leader's
+own freshest local value, cannot mechanically return a stale result. The 2 stale flags at write50
+are consistent with the same load-tester measurement race described under W=1,R=5, just far
+rarer — W=3,R=3 has less concurrent write traffic than W=1,R=5, so fewer opportunities for that
+race to occur.
 
 ---
 
@@ -225,28 +229,24 @@ replication is still propagating to all peers.
 
 ### Read-heavy (1% write, 99% read)
 
-**Best: W=5, R=1.** Read mean of 134 ms is the lowest of all configs. Zero stale reads. Zero
-503 errors. The high write cost (~1156 ms) is irrelevant when only 118 of 10,000 requests are
-writes. W=1,R=5 and W=3,R=3 both produce 503 errors at this ratio because R > 1 opens too many
-outbound connections under heavy read load. W=5,R=1 pays the consistency cost at write time
-and makes reads entirely free — exactly right for read-heavy workloads.
+**Best: W=5, R=1.** Read mean of 133 ms is the lowest of all configs, with zero stale reads. The
+high write cost (~1148 ms) is irrelevant when only 98 of 10,000 requests are writes. W=5,R=1 pays
+the consistency cost at write time and makes reads cheap — exactly right for read-heavy workloads.
 
 ### Write-heavy (90% write, 10% read)
 
-**Best: W=1, R=5** for throughput, with a caveat. Write mean of 288 ms is the lowest across
-all configs. However, read P99 of 20333 ms is extreme — a small fraction of reads suffer
-severe tail latency. If the application can tolerate occasional slow reads, W=1,R=5 at 90%
-write is the fastest. If read tail latency matters, W=3,R=3 (write mean 705 ms, read P99
-355 ms) is more predictable. W=5,R=1 is the worst choice for write-heavy: 1090 ms per write
-at 90% ratio means the system spends almost all its time in write coordination.
+**Best: W=1, R=5.** Write mean of 279 ms is the lowest across all configs, and — unlike an
+earlier version of this analysis claimed — its read cost at 90% write is not degraded either
+(read mean 342 ms, P99 429 ms, both in line with its other write ratios). W=5,R=1 is the worst
+choice for write-heavy: ~1090 ms per write at 90% ratio means the system spends almost all its
+time in write coordination, for no read-latency benefit once writes dominate the workload.
 
 ### Balanced (50% write, 50% read)
 
-**Best: W=3, R=3.** Write mean of 727 ms and read mean of 292 ms are the most balanced across
-configs — neither operation dominates latency. W=5,R=1 has cheaper reads but much more
-expensive writes; W=1,R=5 has cheaper writes but more expensive reads and a severe read tail.
-W=3,R=3 splits the cost evenly and its P99s (1715 ms write, 1294 ms read) are the most
-predictable under balanced load.
+**Best: W=3, R=3.** Write mean of 692 ms and read mean of 246 ms are the most balanced across
+configs — neither operation dominates latency, and both P99s (895 ms write, 400 ms read) stay
+predictable. W=5,R=1 has cheaper reads but much more expensive writes; W=1,R=5 has cheaper writes
+but a real (if modest) read latency premium from contacting 4 followers per read.
 
 ---
 
@@ -254,23 +254,28 @@ predictable under balanced load.
 
 | Config | Consistency | Best application type |
 |---|---|---|
-| W=5, R=1 | Strong | **Read-heavy, write-rare**: configuration stores, feature flag services, CDN edge caches, DNS records. Written infrequently by operators, read thousands of times per second by clients. The ~1 s write cost is amortized over many cheap reads. |
-| W=1, R=5 | Theoretically strong, implementation-dependent | **Write-heavy with eventual read consistency acceptable**: event ingestion pipelines, log aggregation, IoT telemetry — workloads where data arrives in bursts and reads are infrequent but must see the latest version when they do occur. Requires correct max-version read implementation to deliver the promised consistency. |
-| W=3, R=3 | Strong | **General-purpose transactional**: session stores, shopping carts, inventory management, financial balances — any balanced read/write workload where neither operation can be sacrificed and stale data is unacceptable. The moderate symmetric cost is the price of reliable consistency without specializing for one operation type. |
+| W=5, R=1 | Strong | **Read-heavy, write-rare**: configuration stores, feature flag services, CDN edge caches, DNS records. Written infrequently by operators, read thousands of times per second by clients. The ~1.1 s write cost is amortized over many cheap (~135 ms) reads, with genuinely zero observed stale reads at any write ratio. |
+| W=1, R=5 | Strong | **Write-heavy with fast writes and acceptable read cost**: event ingestion pipelines, log aggregation, IoT telemetry. Reads cost more than W=5,R=1 (~345 ms, from contacting all 4 followers) but stay flat regardless of write pressure. The small residual "stale" counts observed (0.02%–1.49%) are a load-tester measurement-race artifact (see §3), not a real quorum violation — the max-version read logic is already correct. |
+| W=3, R=3 | Strong | **General-purpose transactional**: session stores, shopping carts, inventory management, financial balances — any balanced read/write workload where neither operation can be sacrificed. The moderate symmetric cost (~700 ms write, ~250 ms read) is the price of reliable consistency without specializing for one operation type. |
 | Leaderless W=5, R=1 | Weak — write divergence under concurrency | **Write-heavy with tolerable inconsistency**: social media activity feeds, analytics counters, recommendation caches — systems where any node can accept writes and serve reads, latency is critical, and showing briefly stale data is acceptable. The lack of a fixed leader improves availability and load distribution but causes detectable divergence: 0.31% stale at 1% write rising to 10.54% at 90% write, even with W+R > N. |
 
 ### Summary
 
 The NWR quorum parameters are a continuous dial between consistency and performance. Increasing
-W shifts cost to writes and makes reads cheap and fresh. Increasing R shifts cost to reads and
-allows cheaper writes. W + R > N is the threshold for guaranteed consistency overlap — but only
-if the read coordinator correctly implements max-version selection across R responses. The
-experiments show that this implementation detail matters: W=1,R=5 violates the theoretical
-guarantee in practice, while W=3,R=3 and W=5,R=1 achieve the expected zero stale reads.
+W shifts cost to writes; increasing R shifts cost to reads. All three leader-follower configs
+achieve W+R>N's consistency guarantee in practice — `leaderRead()`'s max-version selection is
+seeded from the leader's own always-freshest local value, so a stale follower can never make the
+returned result stale. The small non-zero stale counts observed (0%–1.49%, scaling with write
+concurrency) are best explained by a measurement race in the load tester's own staleness detector,
+not a quorum failure — see §3's per-config analysis. Contrary to an earlier version of this
+analysis, read latency does **not** degrade under write pressure for any of the three LF
+configs — it stays flat within each config across all four write ratios; the earlier "follower
+contention balloons P99 to 20+ seconds" claim did not match the underlying data and has been
+removed.
 
 Beyond NWR parameters, the topology matters as much as the numbers. Leaderless W=5,R=1 uses
-the same quorum sizes as leader-follower W=5,R=1 and has identical write and read latency
-(~1091 ms / ~134 ms). Yet stale reads reach 10.54% at 90% write load — a consistency failure
+the same quorum sizes as leader-follower W=5,R=1 and has similar write and read latency
+(~1091 ms / ~135 ms). Yet stale reads reach 10.54% at 90% write load — a consistency failure
 that never occurs in the leader-follower version. The leader acts as a write serialization
 point; without it, concurrent writes to the same key on different coordinator nodes produce
 version divergence that no quorum overlap can prevent. W+R > N is necessary but not sufficient

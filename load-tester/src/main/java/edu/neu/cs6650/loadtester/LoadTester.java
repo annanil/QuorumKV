@@ -22,7 +22,13 @@ public class LoadTester {
           new ShardAwareKvClient(config.getShardControllerUrl(), replicaReads);
       shardClient.init();
       try {
-        runSharded(config, shardClient);
+        if (config.isMigrationTest()) {
+          new MigrationTestRunner(shardClient, config, config.getShardControllerUrl()).run();
+        } else {
+          runSharded(config, shardClient);
+        }
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
       } finally {
         shardClient.shutdown();
       }
