@@ -20,8 +20,10 @@ For a backend/distributed-systems-flavored SWE interview, this project demonstra
 - Quorum-based replication (NWR) implemented from scratch in two topologies
 - Empirical characterization of a consistency/availability tradeoff, including a correctness bug
   found through systematic experimentation, not code review
-- A sharding layer with live data migration between replica groups
 - End-to-end ownership: AWS deployment via Terraform, CI running full-cluster smoke tests
+
+(The project also includes a sharding layer with live data migration — real code, not currently
+a resume claim. See `SHARDING.md` if it comes up or for future development.)
 
 ---
 
@@ -45,8 +47,6 @@ if asked; the honest answer is more credible than a story with a gap in it.
 - **Core quorum mechanics (write/read paths, NWR theory, the leaderless stale-read finding)**:
   deeply understood, defensible cold. This is the load-bearing material — see `STUDY_NOTES.md`
   §2–4 and `analysis.md` in full.
-- **Sharding and migration**: understood at the design level (rebalance algorithm, migration
-  retry/rollback, the shard-assignment formula). See `STUDY_NOTES.md` §5.
 - **Load tester, CI, Terraform**: understood at the "why this exists and what it proves" level,
   code-deep on request. See `STUDY_NOTES.md` §6–7.
 - **AI-assisted development**: substantial parts of the post-coursework code (sharding, migration
@@ -61,16 +61,12 @@ if asked; the honest answer is more credible than a story with a gap in it.
 ```
 • Designed and implemented a distributed in-memory key-value store supporting leader-follower
   and leaderless (Dynamo-style) replication with tunable NWR quorum consistency; validated
-  correctness with automated consistency tests across a 5-node AWS EC2 cluster.
+  correctness with an automated JUnit consistency test suite across a 5-node cluster.
 
-• Empirically quantified a known consistency gap in the leaderless topology — quorum overlap
-  (W+R>N) does not prevent stale reads under concurrent same-key writes — measuring 0.31%–10.5%
-  stale reads scaling with write concurrency, and isolating the root cause to the absence of a
-  write-serialization point.
-
-• Extended the system with Dynamo-style sharding: a standalone ShardController assigning shards
-  to replica groups via consistent hashing, live shard migration over HTTP between group leaders,
-  and versioned config polling for shard-aware clients.
+• Empirically quantified a consistency gap in NWR quorum reads: W+R>N guarantees quorum overlap
+  but not read freshness under concurrency. Isolated two independent root causes via controlled
+  AWS load tests: read-quorum size (0% stale reads at R=1 vs. 99.9% at R=5) and the absence of
+  a write-serialization point in leaderless mode (up to 31.7% stale).
 
 • Built a multithreaded load-testing harness with per-key stale-read detection and latency
   reporting; deployed via Terraform (EC2/ALB/VPC) with a GitHub Actions CI pipeline running
@@ -80,15 +76,21 @@ if asked; the honest answer is more credible than a story with a gap in it.
 Update these only if the underlying code changes.
 
 **What these bullets claim and don't claim:**
-- "Up to 10.5%" is real — from the leaderless W=5,R=1 AWS run at 90% write ratio, in `analysis.md`.
-- "Validated correctness with automated consistency tests" refers to the 4 JUnit test classes
-  (`W5R1LeaderFollowerTest`, `W1R1LeaderFollowerTest`, `LeaderlessInconsistencyTest`,
-  `ConsistencyStressTest`) — real, running tests, not aspirational.
-- "Consistent hashing" is the current wording but is imprecise (see Known Gaps below) — the
-  actual mechanism is `hash(key) % numShards` with an explicit, mutable shard→group assignment
-  map, closer to Redis Cluster's hash-slot model than a consistent-hash ring. Decide before an
-  interview whether to keep this wording (and be ready to correct precisely if pressed) or soften
-  it to "hash-based shard assignment with live rebalancing."
+- The "0% vs. 99.9%" and "31.7%" figures come from the project's AWS load test
+  (`analysis.md` §2–§5 and `STUDY_NOTES.md` §4c) run specifically to isolate whether staleness
+  scales with read-quorum size. Bullet wording deliberately omits thread/request-count specifics
+  (64 threads, 50,000 requests) — those are methodology detail, not the finding; know them if
+  asked (`analysis.md` §1), but they don't belong in the bullet itself.
+- The R=1/R=5 contrast is mechanistic, not just observed: `R=1` reads skip the follower-polling
+  loop entirely (`KvService.leaderRead()`, `readsNeeded = readQuorum - 1 = 0`), so they're
+  structurally immune regardless of concurrency — confirmed by exactly 0.00% stale reads at every
+  write ratio, not just "low."
+- "Validated correctness with an automated JUnit consistency test suite" refers to the 4 JUnit
+  test classes (`W5R1LeaderFollowerTest`, `W1R1LeaderFollowerTest`, `LeaderlessInconsistencyTest`,
+  `ConsistencyStressTest`) — real, running tests, not aspirational. **These run against a local
+  Docker Compose cluster, not AWS** (`STUDY_NOTES.md` §2b: "a live, already-running Docker
+  cluster"; §7: "correctness is tested locally"). Bullet 1's "5-node cluster" is that local Docker
+  cluster; AWS only enters via bullet 2's load-test data — don't attribute AWS to the JUnit suite.
 - No claim of production traffic or real users — this is a benchmarked research/learning system,
   framed as such.
 
@@ -98,14 +100,17 @@ Update these only if the underlying code changes.
 
 Name these first if the conversation gets near them — it reads better than being caught out.
 
-- **Not a consistent-hash ring.** No virtual nodes, no minimal-remapping-on-topology-change
-  property. Shard count is fixed (`SHARD_NUM_SHARDS`, default 4); rebalancing moves whole shards
-  between a small, fixed number of groups.
 - **Leaderless write divergence is a known, unresolved limitation, not a bug that was fixed.**
   There's no vector-clock or last-write-wins conflict resolution — the finding in `analysis.md` is
   a diagnosis, not something the system corrects for. If asked "how would you fix it," the honest
   answer involves either adding a serialization mechanism (defeats the point of leaderless) or a
   conflict-resolution scheme (vector clocks, LWW) — neither is implemented.
+- **The R=5 stale-read finding (leader-follower) is also a diagnosis, not a fix.** No read-repair,
+  no client-side retry-until-fresh, no bounded-staleness read option was added — the system still
+  returns the value it captured at the start of the read, however old that's become by the time it
+  returns. A real fix would mean either speeding up quorum reads (parallel instead of sequential
+  follower polling) or accepting bounded staleness explicitly (e.g., returning a version/timestamp
+  so the caller can detect and retry) — neither is implemented here.
 - **Stale-read detection has a known blind spot.** `StatsController` only tracks versions written
   by the load tester's own process; a restart or a second writer would make measured staleness a
   lower bound, not an exact figure.

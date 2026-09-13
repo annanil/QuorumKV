@@ -36,9 +36,18 @@ build/
 
 ### Load Tester ###
 load-tester/output/
+load-tester/output-original-backup/
 load-tester/target/
 load-tester/path/
 load-tester/dependency-reduced-pom.xml
+
+### Personal study notes (not for the public repo) ###
+STUDY_NOTES.md
+CHEAT_SHEET.md
+CHEAT_SHEET.pdf
+STUDY_NOTES.pdf
+LOAD_TEST_V2.md
+*.docx
 
 ### Terraform ###
 *.tfstate
